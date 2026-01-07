@@ -1,0 +1,129 @@
+<!DOCTYPE html><html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklist Semanal - PWA</title>
+<link rel="manifest" href="manifest.json">
+<style>
+body {font-family: Arial; margin: 10px; background: #f9f9f9; text-align: center;}
+button {display: block; margin: 10px auto; width: 80%; max-width: 300px; padding: 12px 0; font-size: 16px; border-radius: 8px; border: none; cursor: pointer;}
+.day-button {background-color: #4CAF50; color: white;}
+#logsButton, #testPushButton {background-color: #2196F3; color: white;}
+.hidden {display: none;}
+#checklistTable {width: 100%; border-collapse: collapse; margin-top:10px;}
+th, td {border:1px solid #333; padding:8px;}
+th {background:#ddd;}
+input[type=checkbox] {transform: scale(1.4); margin: 5px;}
+.progress-container {width:100%; background:#ddd; border-radius:10px; margin:10px 0;}
+.progress-bar {height:20px; width:0%; background:#4CAF50; color:white; border-radius:10px; line-height:20px; text-align:center;}
+textarea, input[type=number]{width:100%; padding:5px; margin-top:5px; margin-bottom:10px;}
+</style>
+</head>
+<body>
+<h1>Checklist Semanal</h1>
+<div id="home">
+<h2>Selecione o dia</h2>
+<button class="day-button" onclick="openDay('Segunda')">Segunda</button>
+<button class="day-button" onclick="openDay('Terca')">Terça</button>
+<button class="day-button" onclick="openDay('Quarta')">Quarta</button>
+<button class="day-button" onclick="openDay('Quinta')">Quinta</button>
+<button class="day-button" onclick="openDay('Sexta')">Sexta</button>
+<button class="day-button" onclick="openDay('Sabado')">Sábado</button>
+<button class="day-button" onclick="openDay('Domingo')">Domingo</button>
+<br>
+<button id="logsButton" onclick="viewLogs()">Ver registros</button>
+<button id="testPushButton" onclick="testPush()">Testar Notificação Agora</button>
+</div>
+<div id="dayView" class="hidden">
+<h2 id="dayTitle"></h2>
+<div class="progress-container"><div id="progressBar" class="progress-bar">0%</div></div>
+<table id="checklistTable"><tr><th>Item</th><th>Concluído?</th></tr></table>
+<label>Fome (0–10): <input type="number" id="fomeInput" min="0" max="10"></label>
+<label>Humor / Emoção:</label><br><textarea id="humorInput" rows="2"></textarea>
+<label>Observações / Impulsos:</label><br><textarea id="obsInput" rows="3"></textarea>
+<button onclick="saveDay()" style="background:#4CAF50;color:white;">Salvar Dia</button>
+<button onclick="goHome()" style="background:#f44336;color:white;">Voltar</button>
+</div>
+<div id="logsView" class="hidden">
+<h2>Registros</h2>
+<ul id="logsList"></ul>
+<button onclick="goHome()" style="background:#f44336;color:white;">Voltar</button>
+</div>
+<script>
+const routines={
+  'Segunda':['Bicicleta - 30 min','Agachamento - 3x12','Abdominais - 3x15','Mastigue 20x e faça pausa','Controle de impulso: regra 10 min'],
+  'Terca':['HIIT bicicleta - 20 min','Flexão - 3x10–12','Prancha - 3x30–40s','Comer devagar e registrar fome','Distração: caminhar/música'],
+  'Quarta':['Bicicleta - 40 min','Afundo - 3x12 cada perna','Mastigue devagar','Registrar gatilhos emocionais'],
+  'Quinta':['Bicicleta + Alongamento','Agachamento - 3x12','Flexão - 3x10','Prancha - 3x30s','Respire 1 min','Beber água se vontade'],
+  'Sexta':['Bicicleta + HIIT leve','Agachamento - 3x12','Flexão - 3x10','Comer devagar, apreciar','Registrar gatilhos'],
+  'Sabado':['Bicicleta - 30 min','HIIT corpo livre - 15 min','Mastigar devagar, sem culpa','Saborear sem culpa'],
+  'Domingo':['Caminhada / Yoga 30–40 min','Refletir sobre a semana','Relaxar, respirar fundo']
+};
+function openDay(day){
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('logsView').classList.add('hidden');
+  document.getElementById('dayView').classList.remove('hidden');
+  document.getElementById('dayTitle').textContent=day;
+  const table=document.getElementById('checklistTable');
+  table.innerHTML='<tr><th>Item</th><th>Concluído?</th></tr>';
+  routines[day].forEach((item,i)=>{
+    const row=table.insertRow();
+    row.insertCell(0).textContent=item;
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.id='chk'+i; cb.addEventListener('change',updateProgress);
+    row.insertCell(1).appendChild(cb);
+  });
+  document.getElementById('fomeInput').value='';
+  document.getElementById('humorInput').value='';
+  document.getElementById('obsInput').value='';
+  document.getElementById('dayView').dataset.currentDay=day;
+  updateProgress();
+}
+function updateProgress(){
+  const cbs=document.querySelectorAll('#checklistTable input[type=checkbox]');
+  let checked=[...cbs].filter(cb=>cb.checked).length;
+  let percent=Math.round((checked/cbs.length)*100);
+  const bar=document.getElementById('progressBar');
+  bar.style.width=percent+'%'; bar.textContent=percent+'%';
+  bar.style.backgroundColor=percent===100?'#4CAF50':'#FFA500';
+}
+function saveDay(){
+  const day=document.getElementById('dayView').dataset.currentDay;
+  const cbs=document.querySelectorAll('#checklistTable input[type=checkbox]');
+  const checked=[...cbs].filter(cb=>cb.checked).length;
+  const percent=Math.round((checked/cbs.length)*100);
+  const status=percent===100?'OK':(percent>0?'Parcial':'Não realizado');
+  const record={date:new Date().toLocaleDateString(),day,status,percent,fome:document.getElementById('fomeInput').value,humor:document.getElementById('humorInput').value,obs:document.getElementById('obsInput').value};
+  const logs=JSON.parse(localStorage.getItem('checklistLogs')||'[]'); logs.push(record); localStorage.setItem('checklistLogs',JSON.stringify(logs));
+  alert('Dia salvo: '+status+' ('+percent+'%)'); goHome();
+}
+function goHome(){
+  document.getElementById('dayView').classList.add('hidden');
+  document.getElementById('logsView').classList.add('hidden');
+  document.getElementById('home').classList.remove('hidden');
+}
+function viewLogs(){
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('dayView').classList.add('hidden');
+  document.getElementById('logsView').classList.remove('hidden');
+  const ul=document.getElementById('logsList'); ul.innerHTML='';
+  const logs=JSON.parse(localStorage.getItem('checklistLogs')||'[]');
+  logs.forEach(l=>{
+    const li=document.createElement('li');
+    li.style.color=l.percent===100?'green':(l.percent>0?'orange':'red');
+    li.textContent=`${l.date} - ${l.day} - ${l.status} (${l.percent}%) | Fome:${l.fome} | Humor:${l.humor} | Obs:${l.obs}`;
+    ul.appendChild(li);
+  });
+}
+// Push Notification PWA
+if('Notification' in window){ Notification.requestPermission(); }
+function sendPush(message){ if(Notification.permission==='granted'){ new Notification('Checklist Diário', {body:message}); } }
+function checkDailyPush(){
+  const today=new Date().toLocaleDateString();
+  const logs=JSON.parse(localStorage.getItem('checklistLogs')||'[]');
+  if(!logs.some(l=>l.date===today)){ sendPush('Você ainda não registrou o checklist de hoje!'); }
+}
+setInterval(()=>{ const now=new Date(); if(now.getHours()===7 && now.getMinutes()===0){ checkDailyPush(); } },60000);
+function testPush(){ sendPush('Teste de notificação do Checklist!'); }
+</script>
+</body>
+</html>
