@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -34,6 +35,7 @@ textarea, input[type=number]{width:100%; padding:5px; margin-top:5px; margin-bot
 <button id="logsButton" onclick="viewLogs()">Ver registros</button>
 <button id="testPushButton" onclick="testPush()">Testar Notificação Agora</button>
 </div>
+
 <div id="dayView" class="hidden">
 <h2 id="dayTitle"></h2>
 <div class="progress-container"><div id="progressBar" class="progress-bar">0%</div></div>
@@ -44,11 +46,13 @@ textarea, input[type=number]{width:100%; padding:5px; margin-top:5px; margin-bot
 <button onclick="saveDay()" style="background:#4CAF50;color:white;">Salvar Dia</button>
 <button onclick="goHome()" style="background:#f44336;color:white;">Voltar</button>
 </div>
+
 <div id="logsView" class="hidden">
 <h2>Registros</h2>
 <ul id="logsList"></ul>
 <button onclick="goHome()" style="background:#f44336;color:white;">Voltar</button>
 </div>
+
 <script>
 const routines={
   'Segunda':['Bicicleta - 30 min','Agachamento - 3x12','Abdominais - 3x15','Mastigue 20x e faça pausa','Controle de impulso: regra 10 min'],
@@ -59,6 +63,7 @@ const routines={
   'Sabado':['Bicicleta - 30 min','HIIT corpo livre - 15 min','Mastigar devagar, sem culpa','Saborear sem culpa'],
   'Domingo':['Caminhada / Yoga 30–40 min','Refletir sobre a semana','Relaxar, respirar fundo']
 };
+
 function openDay(day){
   document.getElementById('home').classList.add('hidden');
   document.getElementById('logsView').classList.add('hidden');
@@ -78,6 +83,7 @@ function openDay(day){
   document.getElementById('dayView').dataset.currentDay=day;
   updateProgress();
 }
+
 function updateProgress(){
   const cbs=document.querySelectorAll('#checklistTable input[type=checkbox]');
   let checked=[...cbs].filter(cb=>cb.checked).length;
@@ -86,6 +92,7 @@ function updateProgress(){
   bar.style.width=percent+'%'; bar.textContent=percent+'%';
   bar.style.backgroundColor=percent===100?'#4CAF50':'#FFA500';
 }
+
 function saveDay(){
   const day=document.getElementById('dayView').dataset.currentDay;
   const cbs=document.querySelectorAll('#checklistTable input[type=checkbox]');
@@ -96,11 +103,13 @@ function saveDay(){
   const logs=JSON.parse(localStorage.getItem('checklistLogs')||'[]'); logs.push(record); localStorage.setItem('checklistLogs',JSON.stringify(logs));
   alert('Dia salvo: '+status+' ('+percent+'%)'); goHome();
 }
+
 function goHome(){
   document.getElementById('dayView').classList.add('hidden');
   document.getElementById('logsView').classList.add('hidden');
   document.getElementById('home').classList.remove('hidden');
 }
+
 function viewLogs(){
   document.getElementById('home').classList.add('hidden');
   document.getElementById('dayView').classList.add('hidden');
@@ -114,16 +123,35 @@ function viewLogs(){
     ul.appendChild(li);
   });
 }
-// Push Notification PWA
-if('Notification' in window){ Notification.requestPermission(); }
-function sendPush(message){ if(Notification.permission==='granted'){ new Notification('Checklist Diário', {body:message}); } }
+
+// Registrar Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('service-worker.js')
+    .then(function(reg) { console.log('Service Worker registrado com sucesso.', reg); })
+    .catch(function(err) { console.log('Falha ao registrar Service Worker:', err); });
+  });
+}
+
+// Notificações
+function sendPush(message){
+  if(Notification.permission==='granted' && 'serviceWorker' in navigator){
+    navigator.serviceWorker.ready.then(swReg => {
+      swReg.showNotification('Checklist Diário', {body:message, icon:'icon-192.png'});
+    });
+  }
+}
+
 function checkDailyPush(){
   const today=new Date().toLocaleDateString();
   const logs=JSON.parse(localStorage.getItem('checklistLogs')||'[]');
   if(!logs.some(l=>l.date===today)){ sendPush('Você ainda não registrou o checklist de hoje!'); }
 }
+
 setInterval(()=>{ const now=new Date(); if(now.getHours()===7 && now.getMinutes()===0){ checkDailyPush(); } },60000);
+
 function testPush(){ sendPush('Teste de notificação do Checklist!'); }
+Notification.requestPermission();
 </script>
 </body>
 </html>
