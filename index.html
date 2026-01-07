@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Checklist Semanal - PWA</title>
+<title>Checklist de Exercícios</title>
 <link rel="manifest" href="manifest.json">
 <style>
 body {font-family: Arial; margin: 10px; background: #f9f9f9; text-align: center;}
@@ -146,7 +146,7 @@ function sendPush(message){
 function checkDailyPush(){
   const today=new Date().toLocaleDateString();
   const logs=JSON.parse(localStorage.getItem('checklistLogs')||'[]');
-  if(!logs.some(l=>l.date===today)){ sendPush('Você ainda não registrou o checklist de hoje!'); }
+  if(!logs.some(l=>l.date===today)){ sendPush('Registre seus exercícios diários!'); }
 }
 
 setInterval(()=>{ const now=new Date(); if(now.getHours()===7 && now.getMinutes()===0){ checkDailyPush(); } },60000);
