@@ -142,6 +142,7 @@ function sendPush(message){
   }
 }
 
+// Notificação diária 07:00
 function checkDailyPush(){
   const today=new Date().toLocaleDateString();
   const logs=JSON.parse(localStorage.getItem('checklistLogs')||'[]');
@@ -150,7 +151,19 @@ function checkDailyPush(){
 
 setInterval(()=>{ const now=new Date(); if(now.getHours()===7 && now.getMinutes()===0){ checkDailyPush(); } },60000);
 
-function testPush(){ sendPush('Teste de notificação do Checklist!'); }
+// Botão de teste de notificação
+function testPush(){
+  if('serviceWorker' in navigator && navigator.serviceWorker.controller){
+    navigator.serviceWorker.controller.postMessage({
+      type: 'TEST_NOTIFICATION',
+      body: 'Teste de notificação do Checklist funcionando!'
+    });
+  } else {
+    alert('Service Worker não está pronto. Feche e abra o app novamente a partir da tela inicial.');
+  }
+}
+
+// Solicitar permissão de notificação
 Notification.requestPermission();
 </script>
 </body>
